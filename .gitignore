@@ -1,0 +1,34 @@
+# build output
+build/
+out/
+
+# KITTI data (too large for git)
+data/
+
+# compiled objects and binaries
+*.exe
+*.dll
+*.lib
+*.pdb
+*.ilk
+*.exp
+*.obj
+*.o
+
+# visual studio
+.vs/
+*.user
+*.suo
+*.VC.db
+
+# cmake generated
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+install_manifest.txt
+compile_commands.json
+CTestTestfile.cmake
+_deps/
+
+# logs
+*.log
