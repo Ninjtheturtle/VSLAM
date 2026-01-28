@@ -1,0 +1,8 @@
+[
+  {
+    "name": "MSVC 2022 x64 (Build Tools)",
+    "environmentSetupScript": "C:/Program Files (x86)/Microsoft Visual Studio/2022/BuildTools/VC/Auxiliary/Build/vcvarsall.bat",
+    "environmentSetupScriptArgs": ["x64"],
+    "isTrusted": true
+  }
+]

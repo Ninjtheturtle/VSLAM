@@ -1,0 +1,48 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "VSLAM (MSVC Debug)",
+      "type": "cppvsdbg",
+      "request": "launch",
+      "program": "${workspaceFolder}/build/vslam.exe",
+      "args": [
+        "--sequence", "${workspaceFolder}/data/dataset/sequences/00"
+      ],
+      "stopAtEntry": false,
+      "cwd": "${workspaceFolder}",
+      "environment": [
+        {
+          "name": "PATH",
+          "value": "C:/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v12.4/bin;C:/Users/nengj/vcpkg/installed/x64-windows/bin;${env:PATH}"
+        }
+      ],
+      "externalConsole": false,
+      "preLaunchTask": "CMake: Build",
+      "visualizerFile": "",
+      "showDisplayString": true,
+      "logging": {
+        "moduleLoad": false,
+        "trace": false
+      }
+    },
+    {
+      "name": "VSLAM (MSVC Release)",
+      "type": "cppvsdbg",
+      "request": "launch",
+      "program": "${workspaceFolder}/build/vslam.exe",
+      "args": [
+        "--sequence", "${workspaceFolder}/data/dataset/sequences/00"
+      ],
+      "stopAtEntry": false,
+      "cwd": "${workspaceFolder}",
+      "environment": [
+        {
+          "name": "PATH",
+          "value": "C:/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v12.4/bin;C:/Users/nengj/vcpkg/installed/x64-windows/bin;${env:PATH}"
+        }
+      ],
+      "externalConsole": false
+    }
+  ]
+}

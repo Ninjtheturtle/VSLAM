@@ -1,0 +1,35 @@
+{
+  // cmake
+  "cmake.configureArgs": [
+    "-DCMAKE_TOOLCHAIN_FILE=C:/Users/nengj/vcpkg/scripts/buildsystems/vcpkg.cmake",
+    "-DVCPKG_TARGET_TRIPLET=x64-windows",
+    "-DCMAKE_CUDA_ARCHITECTURES=86",
+    "-DCUDAToolkit_ROOT=C:/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v12.4"
+  ],
+  "cmake.buildDirectory": "${workspaceFolder}/build",
+  "cmake.generator": "Ninja",
+  "cmake.buildType": "Release",
+  "cmake.parallelJobs": 8,
+  "cmake.cmakePath": "C:/msys64/ucrt64/bin/cmake.exe",
+  "cmake.defaultKit": "MSVC 2022 x64 (Build Tools)",
+  "cmake.environment": {
+    "VCPKG_ROOT": "C:/Users/nengj/vcpkg",
+    "CUDA_PATH": "C:/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v12.4",
+    "PATH": "C:/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v12.4/bin;${env:PATH}"
+  },
+
+  // file types
+  "files.associations": {
+    "*.cu":  "cuda-cpp",
+    "*.cuh": "cuda-cpp",
+    "*.hpp": "cpp",
+    "*.inl": "cpp"
+  },
+
+  // editor
+  "files.encoding": "utf8",
+  "editor.formatOnSave": true,
+  "C_Cpp.clang_format_style": "{ BasedOnStyle: Google, IndentWidth: 4, ColumnLimit: 100 }",
+  "C_Cpp.default.configurationProvider": "ms-vscode.cmake-tools",
+  "C_Cpp.intelliSenseEngine": "default"
+}

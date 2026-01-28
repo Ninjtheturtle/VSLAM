@@ -1,0 +1,34 @@
+{
+  "configurations": [
+    {
+      "name": "MSVC x64 (CUDA)",
+      "includePath": [
+        "${workspaceFolder}/include",
+        "${workspaceFolder}/build/_deps/rerun_sdk-src/rerun_cpp/src",
+        "C:/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v12.4/include",
+        "C:/Users/nengj/vcpkg/installed/x64-windows/include"
+      ],
+      "defines": [
+        "_WIN32",
+        "_WIN64",
+        "WIN32_LEAN_AND_MEAN",
+        "NOMINMAX",
+        "__CUDACC__"
+      ],
+      "compilerPath": "C:/Program Files (x86)/Microsoft Visual Studio/2022/BuildTools/VC/Tools/MSVC/14.44.35207/bin/Hostx64/x64/cl.exe",
+      "cStandard": "c17",
+      "cppStandard": "c++17",
+      "intelliSenseMode": "windows-msvc-x64",
+      "configurationProvider": "ms-vscode.cmake-tools",
+      "browse": {
+        "path": [
+          "${workspaceFolder}",
+          "C:/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v12.4/include",
+          "C:/Users/nengj/vcpkg/installed/x64-windows/include"
+        ],
+        "limitSymbolsToIncludedHeaders": true
+      }
+    }
+  ],
+  "version": 4
+}

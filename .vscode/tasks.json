@@ -1,0 +1,72 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "CMake: Configure (Release)",
+      "type": "shell",
+      "command": "\"C:\\Program Files (x86)\\Microsoft Visual Studio\\2022\\BuildTools\\VC\\Auxiliary\\Build\\vcvarsall.bat\" x64 && C:\\msys64\\ucrt64\\bin\\cmake.exe -B \"${workspaceFolder}\\build\" -S \"${workspaceFolder}\" -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_TOOLCHAIN_FILE=C:/Users/nengj/vcpkg/scripts/buildsystems/vcpkg.cmake -DVCPKG_TARGET_TRIPLET=x64-windows -DCMAKE_CUDA_ARCHITECTURES=86",
+      "options": {
+        "shell": { "executable": "cmd.exe", "args": ["/C"] }
+      },
+      "group": "build",
+      "problemMatcher": "$msCompile",
+      "detail": "Configure CMake build system with vcpkg + CUDA (MSVC env)"
+    },
+    {
+      "label": "CMake: Configure (Debug)",
+      "type": "shell",
+      "command": "\"C:\\Program Files (x86)\\Microsoft Visual Studio\\2022\\BuildTools\\VC\\Auxiliary\\Build\\vcvarsall.bat\" x64 && C:\\msys64\\ucrt64\\bin\\cmake.exe -B \"${workspaceFolder}\\build\" -S \"${workspaceFolder}\" -G Ninja -DCMAKE_BUILD_TYPE=Debug -DCMAKE_TOOLCHAIN_FILE=C:/Users/nengj/vcpkg/scripts/buildsystems/vcpkg.cmake -DVCPKG_TARGET_TRIPLET=x64-windows -DCMAKE_CUDA_ARCHITECTURES=86",
+      "options": {
+        "shell": { "executable": "cmd.exe", "args": ["/C"] }
+      },
+      "group": "build",
+      "problemMatcher": "$msCompile",
+      "detail": "Configure CMake build system (Debug, MSVC env)"
+    },
+    {
+      "label": "CMake: Build",
+      "type": "shell",
+      "command": "\"C:\\Program Files (x86)\\Microsoft Visual Studio\\2022\\BuildTools\\VC\\Auxiliary\\Build\\vcvarsall.bat\" x64 && C:\\msys64\\ucrt64\\bin\\cmake.exe --build \"${workspaceFolder}\\build\" --config Release -j 8",
+      "options": {
+        "shell": { "executable": "cmd.exe", "args": ["/C"] }
+      },
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      },
+      "problemMatcher": "$msCompile",
+      "detail": "Build VSLAM executable (parallel -j8, MSVC env)"
+    },
+    {
+      "label": "CMake: Configure + Build",
+      "dependsOn": ["CMake: Configure (Release)", "CMake: Build"],
+      "dependsOrder": "sequence",
+      "group": "build",
+      "detail": "Full configure + build from clean state"
+    },
+    {
+      "label": "Run VSLAM (KITTI sequence 00)",
+      "type": "shell",
+      "command": "${workspaceFolder}/build/vslam.exe",
+      "args": [
+        "--sequence", "${workspaceFolder}/data/dataset/sequences/00"
+      ],
+      "options": {
+        "env": {
+          "PATH": "C:/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v12.4/bin;C:/Users/nengj/vcpkg/installed/x64-windows/bin;${env:PATH}"
+        }
+      },
+      "group": "test",
+      "detail": "Run VSLAM on KITTI sequence 00"
+    },
+    {
+      "label": "Clean Build",
+      "type": "shell",
+      "command": "Remove-Item",
+      "args": ["-Recurse", "-Force", "${workspaceFolder}/build"],
+      "options": { "shell": { "executable": "powershell" } },
+      "group": "build",
+      "detail": "Delete build directory for clean rebuild"
+    }
+  ]
+}
