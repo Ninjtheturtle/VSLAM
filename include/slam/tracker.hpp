@@ -32,8 +32,8 @@ public:
 
         int   min_tracked_points = 80;
         int   pnp_iterations     = 500;
-        float pnp_reprojection   = 4.0f;
-        int   pnp_min_inliers    = 20;
+        float pnp_reprojection   = 5.5f;
+        int   pnp_min_inliers    = 15;
         float stereo_epi_tol     = 2.0f;
         float stereo_d_min       = 3.0f;
         float stereo_d_max       = 300.0f;
