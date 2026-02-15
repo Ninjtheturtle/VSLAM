@@ -167,7 +167,7 @@ void Visualizer::log_trajectory(const Map::Ptr& map,
     for (auto& seg : segments)
         strips.emplace_back(seg);
 
-    rec_->log("world/camera/trajectory",
+    rec_->log("world/trajectory",
         rerun::archetypes::LineStrips3D(strips)
             .with_colors({rerun::components::Color(0, 255, 128)})   // bright green
             .with_radii(std::vector<float>(strips.size(), 0.5f)));
@@ -189,7 +189,7 @@ void Visualizer::log_map(const Map::Ptr& map, double timestamp)
         positions.push_back({(float)p.x(), (float)p.y(), (float)p.z()});
     }
 
-    rec_->log("world/camera/map/points",
+    rec_->log("world/map/points",
         rerun::archetypes::Points3D(positions)
             .with_radii(std::vector<float>(positions.size(), 0.03f))
     );
@@ -204,7 +204,7 @@ void Visualizer::log_ground_truth(const std::vector<std::array<float, 3>>& cente
     for (auto& c : centers)
         pts.push_back({c[0], c[1], c[2]});
 
-    rec_->log_static("world/camera/ground_truth",
+    rec_->log_static("world/ground_truth/trajectory",
         rerun::archetypes::LineStrips3D(
             {rerun::components::LineStrip3D(pts)})
             .with_colors({rerun::components::Color(255, 165, 0)})  // orange
