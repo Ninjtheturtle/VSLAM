@@ -407,7 +407,7 @@ void LocalBA::optimize() {
 
     // cull high-reprojection-error observations
     {
-        const double cull_thresh2 = 9.0;  // 3px^2
+        const double cull_thresh2 = 49.0;  // 7px^2
         for (auto& kf : window) {
             const double* pose = pose_params.at(kf->id).data();
             for (int kp_idx = 0; kp_idx < (int)kf->keypoints.size(); ++kp_idx) {
