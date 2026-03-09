@@ -23,9 +23,23 @@ public:
     double timestamp;
     cv::Mat image_gray;
 
-    // left image features
+    // KLT pyramid built once at construction, reused by calcOpticalFlowPyrLK
+    // on non-KF frames these are the only tracked features
+    std::vector<cv::Mat>                   klt_pyramid;
+    std::vector<cv::Point2f>               flow_pts;   // current 2D positions
+    std::vector<std::shared_ptr<MapPoint>> flow_mps;   // matching 3D map points
+
+    // left image features (KFs only)
     std::vector<cv::KeyPoint> keypoints;
     cv::Mat                   descriptors;  // Nx32 CV_8U, ORB
+
+    // right image, stereo only
+    cv::Mat                   image_right;
+    std::vector<cv::Mat>      klt_pyramid_right;
+    std::vector<cv::KeyPoint> keypoints_right;
+    cv::Mat                   descriptors_right;
+
+    std::vector<float> uR;  // right x-coord per left kp, -1 = no match
 
     // one per kp, nullptr = unmatched
     std::vector<std::shared_ptr<MapPoint>> map_points;

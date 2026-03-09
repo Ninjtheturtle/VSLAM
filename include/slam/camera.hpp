@@ -12,6 +12,8 @@ struct Camera {
     double cx, cy;
     double k1, k2;  // radial distortion, 0 if undistorted
     int    width, height;
+    double baseline = 0.0;  // stereo baseline metres, 0 = mono
+    bool is_stereo() const { return baseline > 0.0; }
 
     Camera() = default;
     Camera(double fx, double fy, double cx, double cy,
