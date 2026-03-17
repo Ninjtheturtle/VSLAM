@@ -215,3 +215,224 @@ void cuda_match_hamming(
     CUDA_CHECK(cudaFree(d_dist));
 }
 
+// stereo epipolar matching kernel
+// same as ratio kernel but skips train descs that fail epipolar/disparity check
+
+__global__ void hamming_stereo_kernel(
+    const uint32_t* __restrict__ d_query,
+    const uint32_t* __restrict__ d_train,
+    int              N_t,
+    const float* __restrict__ d_y_query,
+    const float* __restrict__ d_y_train,
+    const float* __restrict__ d_x_query,
+    const float* __restrict__ d_x_train,
+    float            epi_tol,
+    float            d_min,
+    float            d_max,
+    float            ratio,
+    int*  __restrict__ d_best_idx,
+    int*  __restrict__ d_best_dist
+)
+{
+    extern __shared__ uint32_t shm[];
+
+    const int qid = blockIdx.x;
+    const int tid = threadIdx.x;
+
+    if (tid < kDescUint32) {
+        shm[tid] = d_query[qid * kDescUint32 + tid];
+    }
+    __syncthreads();
+
+    const float y_q = d_y_query[qid];
+    const float x_q = d_x_query[qid];
+
+    int local_d1 = kMaxHamming + 1, local_i1 = -1;
+    int local_d2 = kMaxHamming + 1;
+
+    for (int t = tid; t < N_t; t += BLOCK_SIZE) {
+        float dy   = y_q - d_y_train[t];
+        if (dy < 0.0f) dy = -dy;
+        if (dy > epi_tol) continue;  // rectified row check
+
+        float disp = x_q - d_x_train[t];
+        if (disp < d_min || disp > d_max) continue;  // valid disparity range
+
+        const uint32_t* tptr = d_train + t * kDescUint32;
+        int dist = 0;
+        #pragma unroll
+        for (int k = 0; k < kDescUint32; ++k) {
+            dist += __popc(shm[k] ^ tptr[k]);
+        }
+        if (dist < local_d1) {
+            local_d2 = local_d1;
+            local_d1 = dist; local_i1 = t;
+        } else if (dist < local_d2) {
+            local_d2 = dist;
+        }
+    }
+
+    __shared__ int  warp_d1[BLOCK_SIZE / 32];
+    __shared__ int  warp_i1[BLOCK_SIZE / 32];
+    __shared__ int  warp_d2[BLOCK_SIZE / 32];
+
+    const int warp_id = tid / 32;
+    const int lane_id = tid % 32;
+
+    #pragma unroll
+    for (int offset = 16; offset >= 1; offset >>= 1) {
+        int od1 = __shfl_down_sync(0xFFFFFFFF, local_d1, offset);
+        int oi1 = __shfl_down_sync(0xFFFFFFFF, local_i1, offset);
+        int od2 = __shfl_down_sync(0xFFFFFFFF, local_d2, offset);
+        if (od1 < local_d1) {
+            if (local_d1 < local_d2) local_d2 = local_d1;
+            local_d1 = od1; local_i1 = oi1;
+        } else {
+            if (od1 < local_d2) local_d2 = od1;
+        }
+        if (od2 < local_d2) local_d2 = od2;
+    }
+
+    if (lane_id == 0) {
+        warp_d1[warp_id] = local_d1;
+        warp_i1[warp_id] = local_i1;
+        warp_d2[warp_id] = local_d2;
+    }
+    __syncthreads();
+
+    if (tid == 0) {
+        const int n_warps = BLOCK_SIZE / 32;
+        int best_d1 = warp_d1[0], best_i1 = warp_i1[0], best_d2 = warp_d2[0];
+        for (int w = 1; w < n_warps; ++w) {
+            int wd1 = warp_d1[w], wi1 = warp_i1[w], wd2 = warp_d2[w];
+            if (wd1 < best_d1) {
+                if (best_d1 < best_d2) best_d2 = best_d1;
+                best_d1 = wd1; best_i1 = wi1;
+            } else {
+                if (wd1 < best_d2) best_d2 = wd1;
+            }
+            if (wd2 < best_d2) best_d2 = wd2;
+        }
+        bool accepted = (best_d1 < ratio * best_d2) && (best_i1 >= 0);
+        d_best_idx [qid] = accepted ? best_i1 : -1;
+        d_best_dist[qid] = accepted ? best_d1 : kMaxHamming;
+    }
+}
+
+// host wrapper (ratio test)
+
+void cuda_match_hamming_ratio(
+    const uint8_t* h_query,
+    const uint8_t* h_train,
+    int            N_q,
+    int            N_t,
+    float          ratio,
+    int*           h_best_idx,
+    int*           h_best_dist
+)
+{
+    if (N_q == 0 || N_t == 0) return;
+
+    const size_t q_bytes = (size_t)N_q * kDescBytes;
+    const size_t t_bytes = (size_t)N_t * kDescBytes;
+
+    uint32_t *d_query = nullptr, *d_train = nullptr;
+    int      *d_idx   = nullptr, *d_dist  = nullptr;
+
+    CUDA_CHECK(cudaMalloc(&d_query, q_bytes));
+    CUDA_CHECK(cudaMalloc(&d_train, t_bytes));
+    CUDA_CHECK(cudaMalloc(&d_idx,   sizeof(int) * N_q));
+    CUDA_CHECK(cudaMalloc(&d_dist,  sizeof(int) * N_q));
+
+    CUDA_CHECK(cudaMemcpy(d_query, h_query, q_bytes, cudaMemcpyHostToDevice));
+    CUDA_CHECK(cudaMemcpy(d_train, h_train, t_bytes, cudaMemcpyHostToDevice));
+
+    const size_t shm_bytes = kDescUint32 * sizeof(uint32_t);
+    dim3 grid(N_q, 1, 1);
+    dim3 block(BLOCK_SIZE, 1, 1);
+
+    hamming_match_ratio_kernel<<<grid, block, shm_bytes>>>(
+        d_query, d_train, N_t, ratio, d_idx, d_dist
+    );
+    CUDA_CHECK(cudaGetLastError());
+    CUDA_CHECK(cudaDeviceSynchronize());
+
+    CUDA_CHECK(cudaMemcpy(h_best_idx,  d_idx,  sizeof(int) * N_q, cudaMemcpyDeviceToHost));
+    CUDA_CHECK(cudaMemcpy(h_best_dist, d_dist, sizeof(int) * N_q, cudaMemcpyDeviceToHost));
+
+    CUDA_CHECK(cudaFree(d_query));
+    CUDA_CHECK(cudaFree(d_train));
+    CUDA_CHECK(cudaFree(d_idx));
+    CUDA_CHECK(cudaFree(d_dist));
+}
+
+// host wrapper (stereo epipolar)
+
+void cuda_match_stereo_epipolar(
+    const uint8_t* h_query,
+    const uint8_t* h_train,
+    int            N_q,
+    int            N_t,
+    const float*   h_y_query,
+    const float*   h_y_train,
+    const float*   h_x_query,
+    const float*   h_x_train,
+    float          epi_tol,
+    float          d_min,
+    float          d_max,
+    float          ratio,
+    int*           h_best_idx,
+    int*           h_best_dist
+)
+{
+    if (N_q == 0 || N_t == 0) return;
+
+    const size_t q_bytes = (size_t)N_q * kDescBytes;
+    const size_t t_bytes = (size_t)N_t * kDescBytes;
+
+    uint32_t *d_query = nullptr, *d_train = nullptr;
+    int      *d_idx   = nullptr, *d_dist  = nullptr;
+    float    *d_yq    = nullptr, *d_yt    = nullptr;
+    float    *d_xq    = nullptr, *d_xt    = nullptr;
+
+    CUDA_CHECK(cudaMalloc(&d_query, q_bytes));
+    CUDA_CHECK(cudaMalloc(&d_train, t_bytes));
+    CUDA_CHECK(cudaMalloc(&d_idx,   sizeof(int)   * N_q));
+    CUDA_CHECK(cudaMalloc(&d_dist,  sizeof(int)   * N_q));
+    CUDA_CHECK(cudaMalloc(&d_yq,    sizeof(float) * N_q));
+    CUDA_CHECK(cudaMalloc(&d_yt,    sizeof(float) * N_t));
+    CUDA_CHECK(cudaMalloc(&d_xq,    sizeof(float) * N_q));
+    CUDA_CHECK(cudaMalloc(&d_xt,    sizeof(float) * N_t));
+
+    CUDA_CHECK(cudaMemcpy(d_query, h_query,   q_bytes,             cudaMemcpyHostToDevice));
+    CUDA_CHECK(cudaMemcpy(d_train, h_train,   t_bytes,             cudaMemcpyHostToDevice));
+    CUDA_CHECK(cudaMemcpy(d_yq,    h_y_query, sizeof(float) * N_q, cudaMemcpyHostToDevice));
+    CUDA_CHECK(cudaMemcpy(d_yt,    h_y_train, sizeof(float) * N_t, cudaMemcpyHostToDevice));
+    CUDA_CHECK(cudaMemcpy(d_xq,    h_x_query, sizeof(float) * N_q, cudaMemcpyHostToDevice));
+    CUDA_CHECK(cudaMemcpy(d_xt,    h_x_train, sizeof(float) * N_t, cudaMemcpyHostToDevice));
+
+    const size_t shm_bytes = kDescUint32 * sizeof(uint32_t);
+    dim3 grid(N_q, 1, 1);
+    dim3 block(BLOCK_SIZE, 1, 1);
+
+    hamming_stereo_kernel<<<grid, block, shm_bytes>>>(
+        d_query, d_train, N_t,
+        d_yq, d_yt, d_xq, d_xt,
+        epi_tol, d_min, d_max, ratio,
+        d_idx, d_dist
+    );
+    CUDA_CHECK(cudaGetLastError());
+    CUDA_CHECK(cudaDeviceSynchronize());
+
+    CUDA_CHECK(cudaMemcpy(h_best_idx,  d_idx,  sizeof(int) * N_q, cudaMemcpyDeviceToHost));
+    CUDA_CHECK(cudaMemcpy(h_best_dist, d_dist, sizeof(int) * N_q, cudaMemcpyDeviceToHost));
+
+    CUDA_CHECK(cudaFree(d_query));
+    CUDA_CHECK(cudaFree(d_train));
+    CUDA_CHECK(cudaFree(d_idx));
+    CUDA_CHECK(cudaFree(d_dist));
+    CUDA_CHECK(cudaFree(d_yq));
+    CUDA_CHECK(cudaFree(d_yt));
+    CUDA_CHECK(cudaFree(d_xq));
+    CUDA_CHECK(cudaFree(d_xt));
+}
