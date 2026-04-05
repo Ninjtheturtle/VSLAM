@@ -13,7 +13,7 @@ namespace slam {
 // thread-safe map container: KFs, 3D pts, sliding window for local BA
 class Map {
 public:
-    static constexpr int kWindowSize = 10;
+    static constexpr int kWindowSize = 12;
 
     using Ptr = std::shared_ptr<Map>;
     static Ptr create() { return Ptr(new Map()); }
