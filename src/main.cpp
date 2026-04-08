@@ -384,7 +384,7 @@ int main(int argc, char** argv) {
             "  BA           %7.1f   %7.1f  (n=%d)\n"
             "  viz          %7.1f   %7.1f\n"
             "  TOTAL        %7.1f   %7.1f\n"
-            "TARGET: avg TOTAL <= 333ms (3 FPS)\n"
+            "TARGET: avg TOTAL <= 200ms (5 FPS)\n"
             "STATUS: %s\n"
             "======================================\n\n",
             frame_count, fps, bm_ba.n,
