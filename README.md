@@ -16,7 +16,7 @@ this isn't ORB-SLAM3. it doesn't have loop closure detection. it doesn't have an
 
 **stereo in, trajectory out.** left and right grayscale images come in, and the system:
 
-1. initializes from a single stereo frame — triangulates 500-1000+ metric map points using `Z = fx * b / d`
+1. initializes from a single stereo frame — triangulates 300-500 metric map points using `Z = fx * b / d`
 2. tracks frame-to-frame using KLT optical flow with forward-backward consistency filtering
 3. estimates pose each frame via motion-only bundle adjustment (Ceres, fixed 3D points, constant-velocity prediction)
 4. inserts keyframes based on translation/rotation/track-coverage triggers
