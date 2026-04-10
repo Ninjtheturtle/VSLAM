@@ -1,16 +1,20 @@
-﻿# Stereo Visual SLAM — from scratch
+﻿# Stereo Visual SLAM - from scratch
 
 [![Watch the video](https://img.youtube.com/vi/4-7MSQ-har8/maxresdefault.jpg)](https://youtu.be/4-7MSQ-har8)
 
-> KITTI sequence 00 — green is my estimate, orange is ground truth, white dots are the live map point cloud
+> KITTI sequence 00 - green is my estimate, orange is ground truth, white dots are the live map point cloud
 
 ---
 
 ## why i built this
 
-i wanted to understand how SLAM actually works — not from a textbook, not from wrapping someone else's library, but by writing every piece myself. the tracker, the bundle adjustment, the GPU kernels, the map, the state machine, all of it. this is a stereo visual SLAM system written from scratch in C++17 and CUDA. it takes raw stereo images from the KITTI odometry benchmark and estimates the camera trajectory in real time while building a 3D map of the environment.
+I never really understood how an autonomous system could navigate a complex city without causing complete chaos. How does it weave through pedestrians or moving vehicles? I found the problem so puzzling that I wanted to take a stab at it without any outside help.
 
-this isn't ORB-SLAM3. it doesn't have loop closure detection. it doesn't have an atlas or IMU fusion. what it does have is a clean, readable implementation of the core SLAM pipeline that i actually understand end to end — because i wrote every line of it.
+That meant NO pre-built perception stacks. NO black-box libraries. NO deep learning priors. Just raw pixels in, and a 6-DOF pose out.
+
+How hard could it be?
+
+Cut to four months later, and I've pretty much lost all my hair. Between late nights reading SLAM textbooks, studying branches of mathematics I didn't know existed, and experiencing integration hell for the tenth time in a single week, I finally have something to show for it.
 
 ---
 
@@ -18,7 +22,7 @@ this isn't ORB-SLAM3. it doesn't have loop closure detection. it doesn't have an
 
 **stereo in, trajectory out.** left and right grayscale images come in, and the system:
 
-1. initializes from a single stereo frame — triangulates 300-500 metric map points using `Z = fx * b / d`
+1. initializes from a single stereo frame, triangulates 300-500 metric map points using `Z = fx * b / d`
 2. tracks frame-to-frame using KLT optical flow with forward-backward consistency filtering
 3. estimates pose each frame via motion-only bundle adjustment (Ceres, fixed 3D points, constant-velocity prediction)
 4. inserts keyframes based on translation/rotation/track-coverage triggers
@@ -32,9 +36,7 @@ no scale ambiguity — stereo gives you real-world meters from frame one. the KI
 
 ## the gpu side
 
-i wrote a CUDA kernel for descriptor matching — no libraries, just raw CUDA:
-
-**hamming matcher** — one block per query descriptor, 256 threads, warp-shuffle butterfly reduction. packs (distance, index) into a uint64 so the min reduction finds the argmin in one pass. three variants: raw nearest-neighbor, Lowe ratio test, and stereo epipolar (rejects matches that violate row alignment or disparity range before computing distance). runs asynchronously on a CUDA stream.
+**hamming matcher:** one block per query descriptor, 256 threads, warp-shuffle butterfly reduction. packs (distance, index) into a uint64 so the min reduction finds the argmin in one pass. three variants: raw nearest-neighbor, Lowe ratio test, and stereo epipolar (rejects matches that violate row alignment or disparity range before computing distance). runs asynchronously on a CUDA stream.
 
 ---
 
@@ -44,7 +46,7 @@ the BA is the part i'm most proud of and the part that took the longest to get r
 
 **motion-only BA (per frame):** optimizes only the 6-DOF pose against fixed 3D map points. uses a constant-velocity prediction as the initial guess. runs in ~5ms with 800 tracks.
 
-**local BA (per keyframe):** sliding-window optimizer over the last 12 keyframes using Ceres with SPARSE_SCHUR. optimizes both poses and 3D points jointly. the analytical Jacobians are hand-derived — the stereo cost function has 3 residuals (left u, left v, right u) and i work out the full chain rule through quaternion rotation, projection, and disparity. information-weighted: disparity residual is attenuated at depth (sigma_Z grows quadratic with Z).
+**local BA (per keyframe):** sliding-window optimizer over the last 12 keyframes using Ceres with SPARSE_SCHUR. optimizes both poses and 3D points jointly. the analytical Jacobians are hand-derived - the stereo cost function has 3 residuals (left u, left v, right u) and i work out the full chain rule through quaternion rotation, projection, and disparity. information-weighted: disparity residual is attenuated at depth (sigma_Z grows quadratic with Z).
 
 what the BA does NOT have: any kind of pitch/roll constraint or pose prior. i tried both — they caused more problems than they solved. the BA runs unconstrained (except fixing the oldest keyframe for gauge freedom) and that turns out to be enough.
 
@@ -146,9 +148,3 @@ VSLAM/
 ```
 
 ---
-
-## where this is going
-
-this is a personal project. i built it to learn, and i learned a lot — about how fragile visual tracking really is, about how much of SLAM is just making the edge cases not explode, about how analytical Jacobians are worth the pain.
-
-next targets: loop closure with real visual place recognition, and testing on more KITTI sequences.
