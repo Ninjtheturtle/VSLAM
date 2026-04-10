@@ -1,5 +1,7 @@
 ﻿# Stereo Visual SLAM — from scratch
 
+[![Watch the video](https://img.youtube.com/vi/4-7MSQ-har8/maxresdefault.jpg)](https://youtu.be/4-7MSQ-har8)
+
 > KITTI sequence 00 — green is my estimate, orange is ground truth, white dots are the live map point cloud
 
 ---
